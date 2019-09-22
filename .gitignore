@@ -2,3 +2,7 @@ build/*
 .vscode
 devel/*
 .catkin_workspace
+input_images/*
+output_bounds/*
+output_images/*
+processed_images/*
