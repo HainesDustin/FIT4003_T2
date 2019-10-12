@@ -6,8 +6,9 @@
 # OPTIONS: C (default), DP, HP, D
 
 # Created 01/10/19 - Andrew Bui
-# Last Modified 02/10/19 - Andrew Bui 
+# Last Modified 11/10/19 - Dustin Haines
 
+import argparse
 import sys
 import cv2
 import numpy as np
@@ -21,96 +22,137 @@ from sensor_msgs.msg import Image
 # Constant directory locations
 rospack = rospkg.RosPack()
 fp = rospack.get_path('yolo_feeders')
-NODE_NAME = "filters"
-IMAGE_FOLDER = fp + '/scripts/'
-OUTPUT_IMAGE_DIR = fp + '/../../output_images/'
-INPUT_IMAGE_TOPIC = "apply_filters"
+NODE_NAME = 'filters'
+IMAGE_FOLDER = fp + '/../../transform_images/'
+
+# Default configurations
+INPUT_TOPIC = 'image_raw/'
 OUTPUT_TOPIC = 'camera/rgb/image_raw'
+IMAGE_CRACK = 'cracks.png'
+IMAGE_NOISE = 'noise.png'
+IMAGE_SCRATCHES = 'scratches.png'
 
-def images_callback(data):
-	# Initial values of filters
-	overlay = False
-	dead_pixel = False
-	hot_pixel = False
-	
-	# Check what filter argument was provided
-	if len(sys.argv) == 2:	
-		if sys.argv[1] == "C":
-			overlay = True
-			# Get overlay image
-			foreground = cv2.imread(IMAGE_FOLDER+'cracks-clear-3.png', -1)
-		if sys.argv[1] == "HP":
-			hot_pixel = True
-		if sys.argv[1] == "DP":
-			dead_pixel = True
-		if sys.argv[1] == "D":
-			overlay = True
-			# Get overlay image
-			foreground = cv2.imread('cracks-clear-3.png', -1)
-	# TODO: Determine if there's a default behaviour	
-	else: 
-		overlay = True
-		# Get overlay image
-		foreground = cv2.imread(IMAGE_FOLDER+'cracks-clear-3.png', -1)
-	
-    # Create a CvBridge instance to convert
-	bridge = CvBridge()
-    # Take the sensor_msgs Image and convert back to cv2
-	cv_image = bridge.imgmsg_to_cv2(data)
-	filename = str(int(time.time())) + '.png'
-	cv2.imwrite(OUTPUT_IMAGE_DIR + filename, cv_image)
-	# Read image that was passed through
-	suppliedImage = cv2.imread(OUTPUT_IMAGE_DIR + filename)
-	print '\n Applying filter to ' + filename
-	# Obtain dimensions of supplied image
-	background_width, background_height, _ = suppliedImage.shape
-	#if background_height > 0 and background_width > 0:
-	pixel_defect_x = random.randint(0, background_width)
-	pixel_defect_y = random.randint(0, background_height)
+# Variables dependent on CLI parameters
+TRANSFORM_IMAGE_NAME = ''
+TRANSFORM_IMAGE = None
+TRANSFORM_ON = False
+DEADPIXEL_ON = False
+HOTPIXEL_ON = False
 
-	if overlay:
+# Constant variables that are reused
+bridge = CvBridge()
+
+def images_in(data):
+    # Take the sensor_msgs Image and convert to cv2
+	supplied_image = bridge.imgmsg_to_cv2(data)#, desired_encoding='bgra8')
+	# Obtain dimensions of supplied feed
+	width, height, _ = supplied_image.shape
+	# Create random pixel defects based on the size of the image
+	#pixel_defect_x = random.randint(0, width)
+	#pixel_defect_y = random.randint(0, height)
+
+
+	if TRANSFORM_ON:
 		# Make overlay same size as camera resolution
-		foreground = cv2.resize(foreground, (background_height, background_width))
+		overlay = cv2.resize(TRANSFORM_IMAGE, (int(height), int(width)))
+
 		# Extract the alpha mask of the RGBA image, convert to RGB
-		b, g, r, a = cv2.split(foreground)
-		overlay_color = cv2.merge((b, g, r))
+		_, _, _, a = cv2.split(overlay)
+		overlay = cv2.cvtColor(overlay, cv2.COLOR_BGRA2BGR)	
 
 		# Apply some simple filtering to remove edge noise
 		mask = cv2.medianBlur(a, 5)
+		inv_mask = cv2.bitwise_not(mask)
 
-		h, w, _ = overlay_color.shape
-		roi = suppliedImage[0:0 + h, 0:0 + w]
+		# Black out the region of the image where the overlay will go
+		supplied_image = cv2.bitwise_and(supplied_image, supplied_image, mask=inv_mask)
+		# Obtain the portion of the overlay image that is the effect
+		overlay = cv2.bitwise_and(overlay, overlay, mask=mask)
 
-		# Black-out the area behind the logo in our original ROI
-		img1_bg = cv2.bitwise_and(roi.copy(), roi.copy(), mask=cv2.bitwise_not(mask))
+		# Merge the two
+		transformed_image = cv2.add(supplied_image, overlay)
 
-		# Mask out the logo from the logo image.
-		img2_fg = cv2.bitwise_and(overlay_color, overlay_color, mask=mask)
-
-		# Update the original image with our new ROI
-		suppliedImage[0:0 + h, 0:0 + w] = cv2.add(img1_bg, img2_fg)
-	if dead_pixel:
-		# Dead Pixel
-		cv2.circle(suppliedImage, (pixel_defect_x, pixel_defect_y), 5, (0, 0, 0), thickness=-1, lineType=8, shift=0)
-	if hot_pixel:
+	#if dead_pixel:
+	#	# Dead Pixel
+	#	cv2.circle(suppliedImage, (pixel_defect_x, pixel_defect_y), 5, (0, 0, 0), thickness=-1, lineType=8, shift=0)
+	#if hot_pixel:
 		# Hot Pixel
-		cv2.circle(suppliedImage, (pixel_defect_x, pixel_defect_y), 5, (45, 67, 237), thickness=-1, lineType=8, shift=0)
-		cv2.circle(suppliedImage, (pixel_defect_x, pixel_defect_y), 3, (63, 82, 63), thickness=-1, lineType=8, shift=0)
-		cv2.circle(suppliedImage, (pixel_defect_x, pixel_defect_y), 1, (81, 99, 232), thickness=-1, lineType=8, shift=0)
+	#	cv2.circle(suppliedImage, (pixel_defect_x, pixel_defect_y), 5, (45, 67, 237), thickness=-1, lineType=8, shift=0)
+	#	cv2.circle(suppliedImage, (pixel_defect_x, pixel_defect_y), 3, (63, 82, 63), thickness=-1, lineType=8, shift=0)
+	#	cv2.circle(suppliedImage, (pixel_defect_x, pixel_defect_y), 1, (81, 99, 232), thickness=-1, lineType=8, shift=0)
 
 	# Convert cv2 image to imgmsg for YOLO
-	yolo_image = bridge.cv2_to_imgmsg(suppliedImage)
-	yolo_image.encoding = 'bgr8'
-	# Publish to YOLO
-	pub.publish(yolo_image)
+	transformed_image_msg = bridge.cv2_to_imgmsg(transformed_image)
+	transformed_image_msg.encoding = 'bgr8'
+	# Publish to topic
+	pub.publish(transformed_image_msg)
+
+def argument_parser():
+	parser = argparse.ArgumentParser()
+	# Specify all possible command line arguments
+	parser.add_argument('-f', '--filename')
+	parser.add_argument('-hp', '--hotpixel', action='store_true')
+	parser.add_argument('-dp', '--deadpixel', action='store_true')
+	parser.add_argument('-c', '--cracks', action='store_true')
+	parser.add_argument('-n', '--noise', action='store_true')
+	parser.add_argument('-s', '--scratches', action='store_true')
+	parser.add_argument('-it', '--input-topic')
+	parser.add_argument('-ot', '--output-topic')
+	return parser
 
 if __name__ == '__main__':
+	# Retrieve argument parser and parse anything supplied
+	parser = argument_parser()
+	args = parser.parse_args()
+	# Update parameters as appropriate
+	if args.cracks:
+		TRANSFORM_IMAGE_NAME = IMAGE_CRACK
+	elif args.noise:
+		TRANSFORM_IMAGE_NAME = IMAGE_NOISE
+	elif args.scratches:
+		TRANSFORM_IMAGE_NAME = IMAGE_SCRATCHES
+	elif args.filename:
+		TRANSFORM_IMAGE_NAME = args.f
+	elif args.hotpixel is not None or args.deadpixel is not None:
+		TRANSFORM_IMAGE_NAME = 'NA'
+	else:
+		print('ERROR: Valid scenario needs to be specified')
+		print('Supply an image to overlay with -f, or use one of the options -c, -n, -s for default images')
+		print('Alternatively, use -h or -d for hot/dead pixel transformations')
+		exit(1)
 
-	pub = rospy.Publisher(OUTPUT_TOPIC, Image, queue_size=1)
+	HOTPIXEL_ON = True if args.hotpixel else False
+	DEADPIXEL_ON = True if args.deadpixel else False
+	
+	# Ensure the supplied file is valid
+	try:
+		if TRANSFORM_IMAGE_NAME != 'NA':
+			TRANSFORM_ON = True
+			file = open(IMAGE_FOLDER + TRANSFORM_IMAGE_NAME, 'r')
+			file.close()
+			# Load the file and keep a reference to minimise disk I/O
+			TRANSFORM_IMAGE = cv2.imread(IMAGE_FOLDER + TRANSFORM_IMAGE_NAME, -1)
+			print('File to use ' + TRANSFORM_IMAGE_NAME + ' exists and will be used for transformations')
+		else:
+			print('No overlay image will be applied. Scenario is only hot/dead pixel')
+	except:
+		print('ERROR: Transform file ' + TRANSFORM_IMAGE_NAME + ' could not be loaded from ' + IMAGE_FOLDER)
+		print('Please check the filename and ensure the file exists')
+		exit(1)
+	
+	# Launch the node
+	pub = rospy.Publisher(OUTPUT_TOPIC, Image, queue_size=2)
 	# Initialise the node
 	rospy.init_node(NODE_NAME, anonymous=True)
 	# Subscribe to topics, specifying the data type and callback function	
-	rospy.Subscriber(INPUT_IMAGE_TOPIC, Image, images_callback)
-	print '\nListening to topic ' +  INPUT_IMAGE_TOPIC
+	rospy.Subscriber(INPUT_TOPIC, Image, images_in)
+	print '\nROS Node launched. Listening to topic ' +  INPUT_TOPIC + ', Outputing to topic ' + OUTPUT_TOPIC
+	print '\nRunning with the following parameters'
+	print 'TRANSFORM_IMAGE_NAME: ' + TRANSFORM_IMAGE_NAME
+	print 'HOTPIXEL_ON:' + str(HOTPIXEL_ON)
+	print 'DEADPIXEL_ON:' + str(DEADPIXEL_ON)
     # Keeps the listener alive
 	rospy.spin()
+
+
+
