@@ -1,5 +1,8 @@
 # FIT4003 Testing Self Driving Cars - Team 2
 
+## Introduction
+This package aims to investigate the impact of visual defects on camera feeds that are fed into AI models used in self driving cars. In particular, the model created by You Only Look Once as implemented by LeggedRobotics [GitHub](https://github.com/leggedrobotics/darknet_ros). Their implementation is included as a submodule for this repository.
+
 ## Prerequsities
 * Ubuntu 16.04 LTS
 * ROS Kinetic - [Install](http://wiki.ros.org/kinetic/Installation/Ubuntu)
@@ -57,12 +60,8 @@ roslaunch yolo_feeders yolo_transform.launch
 ```
 
 ### Run the data collector
-TBA
 ```sh
-# For the image feeder
-rosrun yolo_feeders imageloader.py
-# For the image/bounding box listener
-rosrun yolo_feeders imageresponse.py
+rosrun yolo_feeders box_reader.py
 ```
 
 ## Configuring the scripts
@@ -92,6 +91,15 @@ IMAGE_SCRATCHES : scratches.png
 -s , --scratches     Use the default transform of scratches.png
 -it, --input_topic   Overwrite the default input topic to the one specified
 -ot, --output_topic  Overwrite the default output topic to the one specified
+```
+
+### box_reader.py
+**Parameters**
+```sh
+-ib, --input_box_topic  : Input topic for bounding box information
+-id, --input_det_topic  : Input topic for number of objects detected
+-os, --output_file_sum  : Output filename for the summary report
+-od, --output_file_det  : Output filename for the detailed report
 ```
 
 ### yolo_original.launch

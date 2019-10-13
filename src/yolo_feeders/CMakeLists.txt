@@ -106,7 +106,7 @@ find_package(catkin REQUIRED COMPONENTS
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES yolo_feeders
-#  CATKIN_DEPENDS darknet_ros_msgs roscpp rospy sensor_msgs cv2 cv_bridge
+#  CATKIN_DEPENDS darknet_ros_msgs roscpp rospy sensor_msgs cv2 cv_bridge csv
 #  DEPENDS system_lib
 )
 
