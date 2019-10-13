@@ -1,5 +1,11 @@
 # FIT4003 Testing Self Driving Cars - Team 2
 
+## Prerequsities
+* Ubuntu 16.04 LTS
+* ROS Kinetic - [Install](http://wiki.ros.org/kinetic/Installation/Ubuntu)
+* Autoware - [Install](https://gitlab.com/autowarefoundation/autoware.ai/autoware/wikis/Source-Build)
+* Nvidia/CUDA drivers - [Install](https://gist.github.com/zhanwenchen/e520767a409325d9961072f666815bb8)
+
 ## Getting Started
 **It is assumed you have ROS Kinetic installed prior to the use of this**
 Clone this repo to your local machine in your home directory
@@ -9,9 +15,9 @@ git clone --recursive git@github.com:HainesDustin/FIT4003_T2.git
 Switch to the created directory (FIT4003_T2), then run the following
 ```sh
 # Add execution permissions to the configure script
-chmod +x configure.sh
+chmod +x ./scripts/configure.sh
 # Run the configure script
-./configure.sh
+./scripts/configure.sh
 ```
 The configure script is simple, and does the following
 * Builds a catkin workspace
@@ -26,13 +32,32 @@ In a new terminal window, run
 ```sh
 roscore
 ```
-From there, launch a new terminal and run the following to launch YOLO
-```sh
-roslaunch darknet_ros yolo_v3.launch
-```
-YOLO will now sit patiently waiting for an input file
 
-To launch our scripts, they can be run using the following commands
+We have a couple of things we need to launch
+### Run Autoware
+Again, assumed that autoware is installed and ready to use. Navigate to your autoware folder, source setup.bash and launch the runtime manager
+```sh
+source install/setup.bash
+roslaunch runtime_manager runtime_manager.launch
+```
+
+### Run Image Transformer
+From there, launch a new terminal and run the following to launch the image transformation
+```sh
+rosrun yolo_feeders apply_filters.py
+```
+
+### Run YOLO
+Two terminals are required for this, one for each YOLO instance. Alternatively if you are only interested in one feed only launch the one required
+```sh
+# For the unchanged image feed
+roslaunch yolo_feeders yolo_original.launch
+# For the transformed image feed
+roslaunch yolo_feeders yolo_transform.launch
+```
+
+### Run the data collector
+TBA
 ```sh
 # For the image feeder
 rosrun yolo_feeders imageloader.py
@@ -41,8 +66,50 @@ rosrun yolo_feeders imageresponse.py
 ```
 
 ## Configuring the scripts
-The scripts themselves are located under ```~/FIT4003_T2/src/yolo_feeders/scripts/```
-These can be changed on the fly with changes observed once the service is relaunched
+The transformation and collection scripts themselves are located under ```~/FIT4003_T2/src/yolo_feeders/scripts/```
+These can be changed on the fly with changes observed once the service is relaunched.
+
+The following have different default and command line parameters that can be used for different configurations. See below
+
+### apply_filters.py
+**Defaults**
+```sh
+NODE_NAME       : filters
+IMAGE_FOLDER    : /../../transform_images/
+INPUT_TOPIC     : /image_raw
+OUTPUT_TOPIC    : /transform/image
+IMAGE_CRACK     : cracks.png
+IMAGE_NOISE     : noise.png
+IMAGE_SCRATCHES : scratches.png
+```
+**Parameters**
+```sh
+-f , --filename      Filename of transform image to use, needs to be located in transform_images
+-hp, --hotpixel      Apply a random hotpixel
+-dp, --deadpixel     Apply a random deadpixel
+-c , --cracks        Use the default transform of cracks.png
+-n , --noise         Use the default transform of noise.png
+-s , --scratches     Use the default transform of scratches.png
+-it, --input_topic   Overwrite the default input topic to the one specified
+-ot, --output_topic  Overwrite the default output topic to the one specified
+```
+
+### yolo_original.launch
+**Defaults**
+```sh
+ros_param_file      : $HOME/FIT4003_T2/src/yolo_feeders/config/ros_original.yaml
+network_param_file  : $HOME/FIT4003_T2/src/darknet_ros/darknet_ros/config/yolov3.yaml
+ros_node            : yolo_original
+```
+
+### yolo_transform.launch
+**Defaults**
+```sh
+ros_param_file      : $HOME/FIT4003_T2/src/yolo_feeders/config/ros_transform.yaml
+network_param_file  : $HOME/FIT4003_T2/src/darknet_ros/darknet_ros/config/yolov3.yaml
+ros_node            : yolo_transform
+```
+
 
 ### Questions?
 Get in touch with Dusty if you have issues using this or need to commit to the repo

@@ -24,10 +24,10 @@ rospack = rospkg.RosPack()
 fp = rospack.get_path('yolo_feeders')
 NODE_NAME = 'filters'
 IMAGE_FOLDER = fp + '/../../transform_images/'
-
+# TODO: Export config out to a yaml file and load on launch
 # Default configurations
-INPUT_TOPIC = 'image_raw/'
-OUTPUT_TOPIC = 'camera/rgb/image_raw'
+INPUT_TOPIC = '/image_raw'
+OUTPUT_TOPIC = '/transform/image'
 IMAGE_CRACK = 'cracks.png'
 IMAGE_NOISE = 'noise.png'
 IMAGE_SCRATCHES = 'scratches.png'
@@ -59,7 +59,7 @@ def images_in(data):
 		# Extract the alpha mask of the RGBA image, convert to RGB
 		_, _, _, a = cv2.split(overlay)
 		overlay = cv2.cvtColor(overlay, cv2.COLOR_BGRA2BGR)	
-
+		
 		# Apply some simple filtering to remove edge noise
 		mask = cv2.medianBlur(a, 5)
 		inv_mask = cv2.bitwise_not(mask)
@@ -71,6 +71,8 @@ def images_in(data):
 
 		# Merge the two
 		transformed_image = cv2.add(supplied_image, overlay)
+		# Reverse the image ordering to display correctly
+		transformed_image = cv2.cvtColor(transformed_image, cv2.COLOR_BGR2RGB)
 
 	#if dead_pixel:
 	#	# Dead Pixel
@@ -96,8 +98,8 @@ def argument_parser():
 	parser.add_argument('-c', '--cracks', action='store_true')
 	parser.add_argument('-n', '--noise', action='store_true')
 	parser.add_argument('-s', '--scratches', action='store_true')
-	parser.add_argument('-it', '--input-topic')
-	parser.add_argument('-ot', '--output-topic')
+	parser.add_argument('-it', '--input_topic')
+	parser.add_argument('-ot', '--output_topic')
 	return parser
 
 if __name__ == '__main__':
@@ -123,6 +125,8 @@ if __name__ == '__main__':
 
 	HOTPIXEL_ON = True if args.hotpixel else False
 	DEADPIXEL_ON = True if args.deadpixel else False
+	INPUT_TOPIC = args.input_topic if args.input_topic else INPUT_TOPIC
+	OUTPUT_TOPIC = args.output_topic if args.output_topic else OUTPUT_TOPIC
 	
 	# Ensure the supplied file is valid
 	try:
@@ -139,7 +143,7 @@ if __name__ == '__main__':
 		print('ERROR: Transform file ' + TRANSFORM_IMAGE_NAME + ' could not be loaded from ' + IMAGE_FOLDER)
 		print('Please check the filename and ensure the file exists')
 		exit(1)
-	
+
 	# Launch the node
 	pub = rospy.Publisher(OUTPUT_TOPIC, Image, queue_size=2)
 	# Initialise the node
