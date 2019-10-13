@@ -28,7 +28,7 @@ OUTPUT_FILENAME_SUM = START_TIME + '_Summary.csv'
 OUTPUT_FILE_SUM = None
 OUTPUT_FILENAME_DET = START_TIME + '_Detailed.csv'
 OUTPUT_FILE_DET = None
-NODE_NAME = 'image_response'
+NODE_NAME = 'box_reader'
 
 def bounds_callback(data):
     # Obtain the sequence number
