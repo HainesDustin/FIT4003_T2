@@ -15,7 +15,7 @@ git clone --recursive git@github.com:HainesDustin/FIT4003_T2.git
 Switch to the created directory (FIT4003_T2), then run the following
 ```sh
 # Add execution permissions to the configure script
-chmod +x ./scripts/configure.sh
+chmod +x ./scripts/originalconfigure.sh
 # Run the configure script
 ./scripts/configure.sh
 ```
