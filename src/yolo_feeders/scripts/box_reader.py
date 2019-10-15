@@ -34,8 +34,10 @@ NODE_NAME = 'box_reader'
 last_frame = -1
 
 def bounds_callback(data):
+    global last_frame
     # Obtain the sequence number
     frame_num = data.image_header.seq
+    
     # Verify we haven't already recorded the interpretation of the frame
     if frame_num > last_frame:
         # Update the last frame we saw
@@ -68,6 +70,7 @@ def response():
     # Subscribe to topics, specifying the data type and callback function
     rospy.Subscriber(INPUT_BOX_TOPIC, BoundingBoxes, bounds_callback)
     print 'Listener to /' + INPUT_BOX_TOPIC + ' created'
+    print 'Writing to files with prefix: ' + START_TIME
     
     # Keeps the listener alive
     rospy.spin()
