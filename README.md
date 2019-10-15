@@ -81,6 +81,7 @@ roslaunch yolo_feeders yolo_original.launch
 # For the transformed image feed
 roslaunch yolo_feeders yolo_transform.launch
 ```
+Configuration files for these are located in /src/yolo_feeders/config. Default files for each launch script are defined below. Default threshold value is 0.5
 <a name="run_data_collector"></a>
 ### Run the data collector
 ```sh
@@ -121,7 +122,6 @@ IMAGE_SCRATCHES : scratches.png
 **Parameters**
 ```sh
 -ib, --input_box_topic  : Input topic for bounding box information
--id, --input_det_topic  : Input topic for number of objects detected
 -os, --output_file_sum  : Output filename for the summary report
 -od, --output_file_det  : Output filename for the detailed report
 ```
@@ -130,16 +130,30 @@ IMAGE_SCRATCHES : scratches.png
 **Defaults**
 ```sh
 ros_param_file      : $HOME/FIT4003_T2/src/yolo_feeders/config/ros_original.yaml
-network_param_file  : $HOME/FIT4003_T2/src/darknet_ros/darknet_ros/config/yolov3.yaml
+network_param_file  : $HOME/FIT4003_T2/src/yolo_feeders/config/yolov3.yaml
 ros_node            : yolo_original
 ```
+**Topics (as defined in ros_original.yaml)**  
+```sh
+camera_reading  : /image_raw
+bounding_boxes  : /yolo_original/original_bounding_boxes
+detection_image : /yolo_original/original_detection_image
+```
+
 <a name="yolo_transform"></a>
 ### yolo_transform.launch
 **Defaults**
 ```sh
 ros_param_file      : $HOME/FIT4003_T2/src/yolo_feeders/config/ros_transform.yaml
-network_param_file  : $HOME/FIT4003_T2/src/darknet_ros/darknet_ros/config/yolov3.yaml
+network_param_file  : $HOME/FIT4003_T2/src/yolo_feeders/config/yolov3.yaml
 ros_node            : yolo_transform
+```
+
+**Topics (as defined in ros_transform.yaml)**  
+```sh
+camera_reading  : /transform_image
+bounding_boxes  : /yolo_transform/original_bounding_boxes
+detection_image : /yolo_transform/original_detection_image
 ```
 
 <a name="questions"></a>
