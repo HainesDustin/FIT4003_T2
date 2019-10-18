@@ -3,10 +3,18 @@
 # and prints out results based on arguments
 
 # Created: 15/10/19 - Andrew Bui
-# Last Modified: 15/10/19 - Andrew Bui
+# Last Modified: 18/10/19 - Andrew Bui
 
 import argparse
 import csv
+
+# Configuration
+OUTBOUNDS_RESULTS = '../output_bounds/'
+OUTBOUNDS_FILENAME_DIR = '../output_bounds_reports/'
+OUTPUT_FILENAME_DET = None
+OUTPUT_FILE_DET_REPORT = None
+OUTPUT_FILENAME_SUM = None
+OUTPUT_FILE_SUM_REPORT = None
 
 # Creates parser to read arguments
 def create_parser():
@@ -29,12 +37,14 @@ def object_count(csvFile):
 		has_header = csv.Sniffer().has_header(csvFile.read(1024))
 		csvFile.seek(0)
 		csvReader = csv.reader(csvFile)
-		if had_header:
+		if has_header:
 			next(csvReader)
-
-		for line in csvReader:
-			objectsDetected += int(line[1])
-	
+		try:
+			for line in csvReader:
+				objectsDetected += int(line[1])
+		except ValueError:
+			print('Incorrect report type for this file. Choose -d for detailed report\n')
+			exit(1)
 		print('Number of objects detected: {}\n'.format(objectsDetected))
 
 
@@ -49,32 +59,35 @@ def detailed_breakdown(csvFile):
 		has_header = csv.Sniffer().has_header(csvFile.read(1024))
 		csvFile.seek(0)
 		csvReader = csv.reader(csvFile)
-		if had_header:
+		if has_header:
 			next(csvReader)
 		
 		for line in csvReader:
 			# Appends probability instance if object already exists
-			if line[1] in objects:
-				objects[line[1]].append(float(line[2]))
+			if line[1] in allObjects:
+				allObjects[line[1]].append(float(line[2]))
 			# Otherwise add new object type
 			else:
-				objects[line[1]] = [float(sequence[2])]
+				allObjects[line[1]] = [float(line[2])]
+	
+	# Open file and write results
+	OUTPUT_FILE_DET_REPORT = csv.writer(open(OUTBOUNDS_FILENAME_DIR+OUTPUT_FILENAME_DET, 'w'), delimiter=',')
+	OUTPUT_FILE_DET_REPORT.writerow(['OBJECT_TYPE', 'OBJECT_COUNT', 'AVERAGE_PROB'])
+	print('Writing results in {}'.format(OUTBOUNDS_FILENAME_DIR+OUTPUT_FILENAME_DET))
 
 	# Determine average and count for each object type
-	for key, value in objects.items():
+	for key, value in allObjects.items():
 		average = round(sum(value)/len(value),4)
 		averageProbability[key] = {
 			"average": average,
 			"count": len(value)
 		}
 	
+	# Write each object type to an output csv file 
 	for key, value in sorted(averageProbability.items()):
-		print(key, value)
+		OUTPUT_FILE_DET_REPORT.writerow([key, value['count'], value['average']])
 
-
-if __name__ == "__main__":
-	OUTBOUNDS_RESULTS = '../output_bounds/'
-	
+if __name__ == "__main__":	
 	# Create parser
 	parser = create_parser()
 	args = parser.parse_args()
@@ -83,18 +96,22 @@ if __name__ == "__main__":
 	if args.filename:
 		filename = OUTBOUNDS_RESULTS + args.filename
 
-		# Check if file cann be read, exit if it cannot
+		# Check if file can be read, exit if it cannot
 		try:
 			csvFile = open(filename, mode='r')
 		except IOError:
-			print('Could not read file:{}'.format(filename))
+			print('Could not read file:{}\nEnter a valid filename with the extension included.\n'.format(filename))
 			exit(1)
 
 		# Report based on type of csv is read
 		if args.detailed:
+			OUTPUT_FILENAME_DET = args.filename.split('_')[0] + '_Detailed_Report.csv'
 			detailed_breakdown(csvFile)
 		elif args.summary:
 			object_count(csvFile)
+		else:
+			print('Report type needs to be specified.\nSupply as an argument either -s for summary or -d for detailed.\n')
+		exit(1)
 	else:
 		print('Filename not specified\n')
 		exit(1)
