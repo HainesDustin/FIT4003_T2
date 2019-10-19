@@ -9,8 +9,8 @@ import argparse
 import csv
 
 # Configuration
-OUTBOUNDS_RESULTS = '../output_bounds/'
-OUTBOUNDS_FILENAME_DIR = '../output_bounds_reports/'
+OUTPUT_BOUNDS = '../output_bounds/'
+OUTPUT_FILENAME_DIR = '../output_bounds_reports/'
 OUTPUT_FILENAME_DET = None
 OUTPUT_FILE_DET_REPORT = None
 OUTPUT_FILENAME_SUM = None
@@ -28,9 +28,11 @@ def create_parser():
 	return parser
 
 # Outputs the number of onjects that were found during yolo run
-def object_count(csvFile):
+def summary_breakdown(csvFile):
 
 	objectsDetected = 0
+	numSequence = 0
+	aveProb = 0
 	
 	with csvFile:
 	# Skip first row if there is a header
@@ -41,11 +43,21 @@ def object_count(csvFile):
 			next(csvReader)
 		try:
 			for line in csvReader:
+				numSequence += 1
 				objectsDetected += int(line[1])
+				aveProb += float(line[2])
+
+			aveProb = aveProb/numSequence
 		except ValueError:
 			print('Incorrect report type for this file. Choose -d for detailed report\n')
 			exit(1)
-		print('Number of objects detected: {}\n'.format(objectsDetected))
+		
+		summaryFile = open(OUTPUT_FILENAME_DIR + OUTPUT_FILENAME_SUM, 'w')
+		summaryFile.write('Number of objects detected: {}\n'.format(objectsDetected))
+		summaryFile.write('Total average probability: {}\n'.format(aveProb))
+		summaryFile.close()
+
+		print("Writing summary to {}".format(OUTPUT_FILENAME_SUM))
 
 
 # Outputs average probably and count of each object type
@@ -71,9 +83,9 @@ def detailed_breakdown(csvFile):
 				allObjects[line[1]] = [float(line[2])]
 	
 	# Open file and write results
-	OUTPUT_FILE_DET_REPORT = csv.writer(open(OUTBOUNDS_FILENAME_DIR+OUTPUT_FILENAME_DET, 'w'), delimiter=',')
+	OUTPUT_FILE_DET_REPORT = csv.writer(open(OUTPUT_FILENAME_DIR+OUTPUT_FILENAME_DET, 'w'), delimiter=',')
 	OUTPUT_FILE_DET_REPORT.writerow(['OBJECT_TYPE', 'OBJECT_COUNT', 'AVERAGE_PROB'])
-	print('Writing results in {}'.format(OUTBOUNDS_FILENAME_DIR+OUTPUT_FILENAME_DET))
+	print('Writing results in {}'.format(OUTPUT_FILENAME_DIR+OUTPUT_FILENAME_DET))
 
 	# Determine average and count for each object type
 	for key, value in allObjects.items():
@@ -94,7 +106,7 @@ if __name__ == "__main__":
 
 	# Check that filename has been specified
 	if args.filename:
-		filename = OUTBOUNDS_RESULTS + args.filename
+		filename = OUTPUT_BOUNDS + args.filename
 
 		# Check if file can be read, exit if it cannot
 		try:
@@ -108,7 +120,8 @@ if __name__ == "__main__":
 			OUTPUT_FILENAME_DET = args.filename.split('_')[0] + '_Detailed_Report.csv'
 			detailed_breakdown(csvFile)
 		elif args.summary:
-			object_count(csvFile)
+			OUTPUT_FILENAME_SUM = args.filename.split('_')[0] + '_Summary_Report.txt'
+			summary_breakdown(csvFile)
 		else:
 			print('Report type needs to be specified.\nSupply as an argument either -s for summary or -d for detailed.\n')
 		exit(1)
