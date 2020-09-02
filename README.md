@@ -5,6 +5,9 @@ This repository is devoted to a final year research project at Monash University
 
 We believe that reaching level 5 autonomy for autonomous vehicles is a hard challenge and if we share this resource in replicating camera defects we can aid in ensuring the safety of passengers and pedestrians. Feel free to use this package to test your systems in the test cases where these camera defects occur.  
 
+### Summary
+The result of this project was to create a research style paper documenting our findings on our investigations into autonomous vehicles. While the paper isn't going to be published in a journal or otherwise online, it has been made available in the docs folder of this repository. Have a read of it [here](docs/ASSESSING_THE_IMPACTS_OF_PHYSICAL_SENSOR_DEFECTS_IN_SELF-DRIVING_CARS.pdf)!
+
 ## Table of Contents:
 - [Prerequsities](#prerequsities)
 - [Getting Started](#getting_started)
